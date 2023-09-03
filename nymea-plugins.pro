@@ -2,7 +2,7 @@ TEMPLATE = subdirs
 
 PLUGIN_DIRS = \
     anel                \
-    aqi                 \ 
+   aqi                 \ 
     avahimonitor        \
     awattar             \
     bimmerconnected     \
@@ -70,7 +70,7 @@ PLUGIN_DIRS = \
     spothinta           \
     sunposition         \
     systemmonitor       \
-    tado                \
+   tado                \
     tasmota             \
     tcpcommander        \
     telegram            \
@@ -85,7 +85,6 @@ PLUGIN_DIRS = \
     wakeonlan           \
     wemo                \
     ws2812fx            \
-
 
 message(============================================)
 message("Qt version:" $$[QT_VERSION])
