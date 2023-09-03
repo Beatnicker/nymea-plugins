@@ -5,9 +5,11 @@ PLUGIN_DIRS = \
     aqi                 \ 
     avahimonitor        \
     awattar             \
+    bimmerconnected     \
     bluos               \
     boblight            \
     bose                \
+    bosswerk            \
     coinmarketcap       \
     commandlauncher     \
     datetime            \
@@ -17,8 +19,11 @@ PLUGIN_DIRS = \
     dht                 \
     dweetio             \
     dynatrace           \
+    easee               \
     elgato              \
     eq-3                \
+    espuino             \
+    evbox               \
     fastcom             \
     flowercare          \
     fronius             \
@@ -34,6 +39,7 @@ PLUGIN_DIRS = \
     lgsmarttv           \
     lifx                \
     mecelectronics      \
+    meross              \
     mailnotification    \
     mqttclient          \
     mystrom             \
@@ -41,6 +47,7 @@ PLUGIN_DIRS = \
     nanoleaf            \
     netatmo             \
     networkdetector     \
+    notifyevents        \
     nuki                \
     mcp3008             \
     onewire             \
@@ -48,20 +55,21 @@ PLUGIN_DIRS = \
     openweathermap      \
     osdomotics          \
     philipshue          \
+    powerfox            \
     pushbullet          \
     pushnotifications   \
-    shelly              \
-    solarlog            \
-    systemmonitor       \
     reversessh          \
     senic               \
     serialportcommander \
     sgready             \
+    shelly              \
     simpleheatpump      \
-    sma                 \
+    solarlog            \
     somfytahoma         \
     sonos               \
+    spothinta           \
     sunposition         \
+    systemmonitor       \
     tado                \
     tasmota             \
     tcpcommander        \
@@ -73,6 +81,7 @@ PLUGIN_DIRS = \
     udpcommander        \
     unifi               \
     usbrelay            \
+    usbrly82            \
     wakeonlan           \
     wemo                \
     ws2812fx            \
@@ -95,7 +104,6 @@ QMAKE_EXTRA_TARGETS += lupdate
 # make lrelease to build .qm from .ts
 lrelease.depends = FORCE
 for (entry, PLUGIN_DIRS):lrelease.commands += lrelease $$files($$PWD/$${entry}/translations/*.ts, true);
-for (entry, PLUGIN_DIRS):lrelease.commands += rsync -a $$PWD/$${entry}/translations/*.qm $$OUT_PWD/translations/;
 QMAKE_EXTRA_TARGETS += lrelease
 
 # For Qt-Creator's code model: Add CPATH to INCLUDEPATH explicitly

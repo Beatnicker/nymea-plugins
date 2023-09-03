@@ -33,6 +33,8 @@
 
 #include "integrations/integrationplugin.h"
 
+#include "extern-plugininfo.h"
+
 class MqttChannel;
 
 class IntegrationPluginTasmota: public IntegrationPlugin
@@ -68,17 +70,10 @@ private:
     QHash<ThingClassId, ParamTypeId> m_channelParamTypeMap;
     QHash<ThingClassId, ParamTypeId> m_openingChannelParamTypeMap;
     QHash<ThingClassId, ParamTypeId> m_closingChannelParamTypeMap;
-    QHash<ThingClassId, StateTypeId> m_powerStateTypeMap;
 
     QHash<ThingClassId, ActionTypeId> m_closableOpenActionTypeMap;
     QHash<ThingClassId, ActionTypeId> m_closableCloseActionTypeMap;
     QHash<ThingClassId, ActionTypeId> m_closableStopActionTypeMap;
-
-    // Helpers for both devices
-    QHash<ThingClassId, StateTypeId> m_connectedStateTypeMap;
-    QHash<ThingClassId, StateTypeId> m_signalStrengthStateTypeMap;
-
-    QHash<ThingClassId, StateTypeId> m_brightnessStateTypeMap;
 };
 
 #endif // INTEGRATIONPLUGINTASMOTA_H

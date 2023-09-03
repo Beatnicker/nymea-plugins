@@ -44,6 +44,12 @@
 // API doc:
 // https://api.mystrom.ch/
 
+QList<int> supportedPlugs {
+    101, // Switch CH v1
+    106, // Switch CH v2
+    107  // Switch EU
+};
+
 IntegrationPluginMyStrom::IntegrationPluginMyStrom()
 {
 }
@@ -59,16 +65,52 @@ void IntegrationPluginMyStrom::init()
 
 void IntegrationPluginMyStrom::discoverThings(ThingDiscoveryInfo *info)
 {
+    QList<QNetworkReply*> *pendingReplies = new QList<QNetworkReply*>();
+    connect(info, &ThingDiscoveryInfo::finished, this, [pendingReplies](){
+        delete pendingReplies;
+    });
+
     foreach (const ZeroConfServiceEntry &entry, m_zeroConf->serviceEntries()) {
         qCDebug(dcMyStrom()) << "Found myStrom device:" << entry;
         if (entry.protocol() != QAbstractSocket::IPv4Protocol) {
             continue;
         }
-        ThingDescriptor descriptor(switchThingClassId, entry.name(), entry.hostAddress().toString());
-        descriptor.setParams({Param(switchThingIdParamTypeId, entry.txt("id"))});
-        info->addThingDescriptor(descriptor);
+        QUrl infoUrl;
+        infoUrl.setScheme("http");
+        infoUrl.setHost(entry.hostAddress().toString());
+        infoUrl.setPath("/api/v1/info");
+
+        QNetworkRequest request(infoUrl);
+        QNetworkReply *reply = hardwareManager()->networkManager()->get(request);
+        pendingReplies->append(reply);
+        connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
+        connect(reply, &QNetworkReply::finished, info, [=](){
+            if (reply->error() != QNetworkReply::NoError) {
+                finishDiscoveryReply(reply, info, pendingReplies);
+                return;
+            }
+            QByteArray data = reply->readAll();
+            QJsonParseError error;
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(data, &error);
+            if (error.error != QJsonParseError::NoError) {
+                finishDiscoveryReply(reply, info, pendingReplies);
+                return;
+            }
+            qCDebug(dcMyStrom) << "Info response:" << qUtf8Printable(jsonDoc.toJson());
+
+            QVariantMap deviceInfo = jsonDoc.toVariant().toMap();
+            if (supportedPlugs.contains(deviceInfo.value("type").toInt())) {
+                ThingDescriptor descriptor(switchThingClassId, entry.name(), entry.hostAddress().toString());
+                descriptor.setParams({Param(switchThingIdParamTypeId, entry.txt("id"))});
+                info->addThingDescriptor(descriptor);
+            }
+            finishDiscoveryReply(reply, info, pendingReplies);
+        });
     }
-    info->finish(Thing::ThingErrorNoError);
+
+    if (pendingReplies->isEmpty()) {
+        info->finish(Thing::ThingErrorNoError);
+    }
 }
 
 void IntegrationPluginMyStrom::setupThing(ThingSetupInfo *info)
@@ -81,6 +123,7 @@ void IntegrationPluginMyStrom::setupThing(ThingSetupInfo *info)
 
     QNetworkRequest request(infoUrl);
     QNetworkReply *reply = hardwareManager()->networkManager()->get(request);
+    connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
     connect(reply, &QNetworkReply::finished, info, [=](){
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(dcMyStrom()) << "Error fetching device info from myStrom device" << info->thing()->name();
@@ -97,9 +140,15 @@ void IntegrationPluginMyStrom::setupThing(ThingSetupInfo *info)
         }
 
         qCDebug(dcMyStrom()) << "Device info:" << qUtf8Printable(jsonDoc.toJson(QJsonDocument::Indented));
+        QVariantMap deviceInfo = jsonDoc.toVariant().toMap();
+        if (!supportedPlugs.contains(deviceInfo.value("type").toInt())) {
+            qCWarning(dcMyStrom()) << "This device does not seem to be a myStrom WiFi switch";
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("This device does not seem to be a myStrom WiFi switch."));
+            return;
+        }
         info->finish(Thing::ThingErrorNoError);
 
-        info->thing()->setStateValue("connected", true);
+        info->thing()->setStateValue(switchConnectedStateTypeId, true);
 
         pluginStorage()->beginGroup(info->thing()->id().toString());
         pluginStorage()->setValue("cachedAddress", infoUrl.host());
@@ -117,10 +166,12 @@ void IntegrationPluginMyStrom::postSetupThing(Thing *thing)
             foreach (Thing *thing, myThings().filterByThingClassId(switchThingClassId)) {
                 QUrl url = composeUrl(thing, "/report");
                 QNetworkReply *reply = hardwareManager()->networkManager()->get(QNetworkRequest(url));
+                connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
                 connect(reply, &QNetworkReply::finished, thing, [reply, thing](){
                     if (reply->error() != QNetworkReply::NoError) {
                         qCWarning(dcMyStrom()) << "Error fetching report from myStrom device:" << reply->errorString();
                         thing->setStateValue(switchConnectedStateTypeId, false);
+                        thing->setStateValue(switchCurrentPowerStateTypeId, 0);
                         return;
                     }
                     QByteArray data = reply->readAll();
@@ -167,6 +218,7 @@ void IntegrationPluginMyStrom::executeAction(ThingActionInfo *info)
             powerUrl.setQuery(query);
 
             QNetworkReply *reply = hardwareManager()->networkManager()->get(QNetworkRequest(powerUrl));
+            connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
             connect(reply, &QNetworkReply::finished, this, [info, reply, power](){
                 if (reply->error() != QNetworkReply::NoError) {
                     qCWarning(dcMyStrom()) << "Error switching myStrom switch:" << reply->error() << reply->errorString();
@@ -179,6 +231,14 @@ void IntegrationPluginMyStrom::executeAction(ThingActionInfo *info)
                 info->finish(Thing::ThingErrorNoError);
             });
         }
+    }
+}
+
+void IntegrationPluginMyStrom::finishDiscoveryReply(QNetworkReply *reply, ThingDiscoveryInfo *info, QList<QNetworkReply *> *pendingReplies)
+{
+    pendingReplies->removeAll(reply);
+    if (pendingReplies->isEmpty()) {
+        info->finish(Thing::ThingErrorNoError);
     }
 }
 

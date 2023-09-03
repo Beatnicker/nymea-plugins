@@ -35,12 +35,15 @@
 
 #include "extern-plugininfo.h"
 
+#include <coap/coap.h>
 #include <QHostAddress>
+#include <QNetworkRequest>
+#include <QUrlQuery>
 
 class ZeroConfServiceBrowser;
 class PluginTimer;
 
-class MqttChannel;
+class ShellyJsonRpcClient;
 
 class IntegrationPluginShelly: public IntegrationPlugin
 {
@@ -54,33 +57,45 @@ public:
     explicit IntegrationPluginShelly();
     ~IntegrationPluginShelly() override;
 
+
     void init() override;
     void discoverThings(ThingDiscoveryInfo *info) override;
+    void startPairing(ThingPairingInfo *info) override;
+    void confirmPairing(ThingPairingInfo *info, const QString &username, const QString &password) override;
     void setupThing(ThingSetupInfo *info) override;
     void postSetupThing(Thing *thing) override;
     void thingRemoved(Thing *thing) override;
     void executeAction(ThingActionInfo *info) override;
 
 private slots:
-    void onClientConnected(MqttChannel* channel);
-    void onClientDisconnected(MqttChannel* channel);
-    void onPublishReceived(MqttChannel* channel, const QString &topic, const QByteArray &payload);
+    void joinMulticastGroup();
+    void onMulticastMessageReceived(const QHostAddress &source, const CoapPdu &pdu);
 
     void updateStatus();
-    void reconfigureUnconnected();
+    void fetchStatusGen1(Thing *thing);
+    void fetchStatusGen2(Thing *thing);
 
 private:
-    void setupShellyGateway(ThingSetupInfo *info);
+    void setupGen1(ThingSetupInfo *info);
+    void setupGen2(ThingSetupInfo *info);
     void setupShellyChild(ThingSetupInfo *info);
 
     QHostAddress getIP(Thing *thing) const;
+    bool isGen2(const QString &shellyId) const;
+
+    void handleInputEvent(Thing *thing, const QString &buttonName, const QString &inputEventString, int inputEventCount);
+
+    QNetworkRequest createHttpRequest(Thing *thing, const QString &path, const QUrlQuery &urlQuery = QUrlQuery());
+    QVariantMap createRpcRequest(const QString &method);
 
 private:
     ZeroConfServiceBrowser *m_zeroconfBrowser = nullptr;
     PluginTimer *m_statusUpdateTimer = nullptr;
     PluginTimer *m_reconfigureTimer = nullptr;
 
-    QHash<Thing*, MqttChannel*> m_mqttChannels;
+    Coap *m_coap = nullptr;
+
+    QHash<Thing*, ShellyJsonRpcClient*> m_rpcClients;
 };
 
 #endif // INTEGRATIONPLUGINSHELLY_H

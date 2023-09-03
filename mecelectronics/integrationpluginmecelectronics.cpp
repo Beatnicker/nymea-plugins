@@ -93,7 +93,13 @@ void IntegrationPluginMecMeter::confirmPairing(ThingPairingInfo *info, const QSt
     connect(reply, &QNetworkReply::finished, info, [=](){
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(dcMecElectronics()) << "Error connecting to mecmeter:" << reply->error() << reply->errorString();
+            // Device responds with InternalServerError on wrong login
+            if (reply->error() == QNetworkReply::InternalServerError) {
+                info->finish(Thing::ThingErrorAuthenticationFailure, QT_TR_NOOP("The login credentials are not valid."));
+                return;
+            }
             info->finish(Thing::ThingErrorHardwareFailure);
+            return;
         }
 
         pluginStorage()->beginGroup(meterId);
@@ -292,8 +298,8 @@ void IntegrationPluginMecMeter::refresh(Thing *thing)
 
 
         // Total energy / power
-        thing->setStateValue(mecMeterTotalEnergyConsumedStateTypeId, dataMap.value("EFAT").toDouble() / 1000.0);
-        thing->setStateValue(mecMeterTotalEnergyProducedStateTypeId, dataMap.value("ERAT").toDouble() / 1000.0);
+        thing->setStateValue(mecMeterTotalEnergyConsumedStateTypeId, 0.001 * qRound(dataMap.value("EFAT").toDouble()));
+        thing->setStateValue(mecMeterTotalEnergyProducedStateTypeId, 0.001 * qRound(dataMap.value("ERAT").toDouble()));
         thing->setStateValue(mecMeterCurrentPowerStateTypeId, dataMap.value("PT").toDouble());
 //        thing->setStateValue(mecMeterTotalForwardeReactiveEnergyStateTypeId, dataMap.value("EFRT").toDouble());
 
@@ -316,14 +322,14 @@ void IntegrationPluginMecMeter::refresh(Thing *thing)
 //        thing->setStateValue(mecMeterFrequencyStateTypeId, dataMap.value("F").toDouble());
 
         // Energy consumed
-        thing->setStateValue(mecMeterEnergyConsumedPhaseAStateTypeId, dataMap.value("EFAA").toDouble() / 1000.0);
-        thing->setStateValue(mecMeterEnergyConsumedPhaseBStateTypeId, dataMap.value("EFAB").toDouble() / 1000.0);
-        thing->setStateValue(mecMeterEnergyConsumedPhaseCStateTypeId, dataMap.value("EFAC").toDouble() / 1000.0);
+        thing->setStateValue(mecMeterEnergyConsumedPhaseAStateTypeId, 0.001 * qRound(dataMap.value("EFAA").toDouble()));
+        thing->setStateValue(mecMeterEnergyConsumedPhaseBStateTypeId, 0.001 * qRound(dataMap.value("EFAB").toDouble()));
+        thing->setStateValue(mecMeterEnergyConsumedPhaseCStateTypeId, 0.001 * qRound(dataMap.value("EFAC").toDouble()));
 
         // Energy produced
-        thing->setStateValue(mecMeterEnergyProducedPhaseAStateTypeId, dataMap.value("ERAA").toDouble() / 1000.0);
-        thing->setStateValue(mecMeterEnergyProducedPhaseBStateTypeId, dataMap.value("ERAB").toDouble() / 1000.0);
-        thing->setStateValue(mecMeterEnergyProducedPhaseCStateTypeId, dataMap.value("ERAC").toDouble() / 1000.0);
+        thing->setStateValue(mecMeterEnergyProducedPhaseAStateTypeId, 0.001 * qRound(dataMap.value("ERAA").toDouble() / 1000.0));
+        thing->setStateValue(mecMeterEnergyProducedPhaseBStateTypeId, 0.001 * qRound(dataMap.value("ERAB").toDouble() / 1000.0));
+        thing->setStateValue(mecMeterEnergyProducedPhaseCStateTypeId, 0.001 * qRound(dataMap.value("ERAC").toDouble() / 1000.0));
     });
 }
 

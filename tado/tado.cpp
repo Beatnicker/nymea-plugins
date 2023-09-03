@@ -142,16 +142,16 @@ void Tado::getToken(const QString &password)
     QNetworkRequest request;
     request.setUrl(QUrl(m_baseAuthorizationUrl));
     request.setHeader(QNetworkRequest::KnownHeaders::ContentTypeHeader, "application/x-www-form-urlencoded");
-    QByteArray body;
-    body.append("client_id=" + m_clientId);
-    body.append("&client_secret=" + m_clientSecret);
-    body.append("&grant_type=password");
-    body.append("&scope=home.user");
-    body.append("&username=" + m_username);
-    body.append("&password=" + password);
+    QUrlQuery query;
+    query.setQueryItems({{"client_id", m_clientId},
+                     {"client_secret", m_clientSecret},
+                     {"grant_type", "password"},
+                     {"scope", "home.user"},
+                     {"username", m_username},
+                     {"password", password}});
 
-    QNetworkReply *reply = m_networkManager->post(request, body);
-    //qCDebug(dcTado()) << "Sending request" << request.url() << body;
+    QNetworkReply *reply = m_networkManager->post(request, query.toString(QUrl::FullyEncoded).toUtf8());
+//    qCDebug(dcTado()) << "Sending request" << request.url() << query.toString(QUrl::FullyEncoded).toUtf8();
     connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
     connect(reply, &QNetworkReply::finished, this, [reply, this] {
 
@@ -356,6 +356,7 @@ void Tado::getZoneState(const QString &homeId, const QString &zoneId)
             return;
         }
 
+
         setConnectionStatus(true);
         setAuthenticationStatus(true);
 
@@ -365,10 +366,11 @@ void Tado::getZoneState(const QString &homeId, const QString &zoneId)
             qDebug(dcTado()) << "Get Token: Recieved invalid JSON object";
             return;
         }
+        qCDebug(dcTado()) << "Zone status received:" << qUtf8Printable(data.toJson(QJsonDocument::Indented));
         ZoneState state;
         QVariantMap map = data.toVariant().toMap();
         state.tadoMode = map["tadoMode"].toString();
-        state.windowOpen = map["openWindow"].toBool();
+        state.windowOpenDetected = map["openWindowDetected"].toBool();
 
         QVariantMap settingsMap = map["setting"].toMap();
         state.settingType = settingsMap["type"].toString();
@@ -567,14 +569,14 @@ void Tado::onRefreshTimer()
     QNetworkRequest request;
     request.setUrl(QUrl(m_baseAuthorizationUrl));
     request.setHeader(QNetworkRequest::KnownHeaders::ContentTypeHeader, "application/x-www-form-urlencoded");
-    QByteArray body;
-    body.append("client_id=" + m_clientId);
-    body.append("&client_secret=" + m_clientSecret);
-    body.append("&grant_type=refresh_token");
-    body.append("&refresh_token=" + m_refreshToken);
-    body.append("&scope=home.user");
+    QUrlQuery query;
+    query.setQueryItems({{"client_id", m_clientId},
+                    {"client_secret", m_clientSecret},
+                    {"grant_type", "refresh_token"},
+                    {"refresh_token", m_refreshToken},
+                    {"scope", "home.user"}});
 
-    QNetworkReply *reply = m_networkManager->post(request, body);
+    QNetworkReply *reply = m_networkManager->post(request, query.toString(QUrl::FullyEncoded).toUtf8());
     connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
     connect(reply, &QNetworkReply::finished, this, [reply, this] {
 

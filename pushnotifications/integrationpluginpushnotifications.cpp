@@ -119,13 +119,30 @@ void IntegrationPluginPushNotifications::executeAction(ThingActionInfo *info)
 
     QString token = thing->paramValue(pushNotificationsThingTokenParamTypeId).toString();
     QString pushService = thing->paramValue(pushNotificationsThingServiceParamTypeId).toString();
-
     QString title = action.param(pushNotificationsNotifyActionTitleParamTypeId).value().toString();
     QString body = action.param(pushNotificationsNotifyActionBodyParamTypeId).value().toString();
+    QString data = action.paramValue(pushNotificationsNotifyActionDataParamTypeId).toString();
+    QString notificationId = action.paramValue(pushNotificationsNotifyActionNotificationIdParamTypeId).toString();
+    bool remove = action.paramValue(pushNotificationsNotifyActionRemoveParamTypeId).toBool();
+    bool sound = action.paramValue(pushNotificationsNotifyActionSoundParamTypeId).toBool();
 
     if (pushService != "None" && token.isEmpty()) {
         return info->finish(Thing::ThingErrorAuthenticationFailure, QT_TR_NOOP("Push notifications need to be reconfigured."));
     }
+
+    if (notificationId.isEmpty()) {
+        notificationId = QUuid::createUuid().toString();
+    }
+
+
+    QVariantMap nymeaData;
+    // FIXME: This is quite ugly but there isn't an API that allows to retrieve the server UUID yet
+    NymeaSettings settings(NymeaSettings::SettingsRoleGlobal);
+    settings.beginGroup("nymead");
+    QUuid serverUuid = settings.value("uuid").toUuid();
+    settings.endGroup();
+    nymeaData.insert("serverUuid", serverUuid);
+    nymeaData.insert("data", data);
 
     QNetworkRequest request;
     QVariantMap payload;
@@ -147,30 +164,40 @@ void IntegrationPluginPushNotifications::executeAction(ThingActionInfo *info)
         QVariantMap notification;
         notification.insert("title", title);
         notification.insert("body", body);
+        notification.insert("nymeaData", nymeaData);
+        notification.insert("notificationId", notificationId);
+        notification.insert("remove", remove);
+
 
         if (pushService == "FB-GCM") {
 
-            QVariantMap soundMap;
-            soundMap.insert("sound", "default");
+            notification.insert("sound", sound);
 
             QVariantMap android;
             android.insert("priority", "high");
-            android.insert("notification", soundMap);
 
             payload.insert("android", android);
             payload.insert("data", notification);
 
         } else if (pushService == "FB-APNs") {
 
-            notification.insert("sound", "default");
+            if (sound) {
+                notification.insert("sound", "default");
+            }
 
             QVariantMap headers;
-            headers.insert("apns-priority", "10");
+            headers.insert("apns-priority", sound ? "10" : "1");
+            headers.insert("apns-collapse-id", notificationId);
+
             QVariantMap apns;
             apns.insert("headers", headers);
 
+            notification.insert("tag", notificationId);
+
             payload.insert("notification", notification);
             payload.insert("apns", apns);
+
+            payload.insert("collapse_key", notificationId);
         }
 
 
@@ -187,8 +214,9 @@ void IntegrationPluginPushNotifications::executeAction(ThingActionInfo *info)
 
         QVariantMap notification;
         notification.insert("card", card);
-        notification.insert("vibrate", true);
-        notification.insert("sound", true);
+        notification.insert("vibrate", sound);
+        notification.insert("sound", sound);
+        notification.insert("nymeaData", nymeaData);
 
         QVariantMap data;
         data.insert("notification", notification);
@@ -225,7 +253,7 @@ void IntegrationPluginPushNotifications::executeAction(ThingActionInfo *info)
         }
 
         QVariantMap replyMap = jsonDoc.toVariant().toMap();
-//        qDebug(dcPushNotifications) << qUtf8Printable(jsonDoc.toJson());
+        //        qDebug(dcPushNotifications) << qUtf8Printable(jsonDoc.toJson());
 
         if (pushService == "FB-GCM" || pushService == "FB-APNs") {
             if (replyMap.value("success").toInt() != 1) {

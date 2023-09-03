@@ -52,7 +52,13 @@ public:
     ~Kodi();
 
     QHostAddress hostAddress() const;
-    int port() const;
+    void setHostAddress(const QHostAddress &address);
+
+    uint port() const;
+    void setPort(uint port);
+
+    uint httpPort() const;
+    void setHttpPort(uint httpPort);
 
     bool connected() const;
 
@@ -67,7 +73,7 @@ public:
     int setRepeat(const QString &repeat);
 
     // actions
-    int showNotification(const QString &title, const QString &message, const int &displayTime, const QString &notificationType);
+    int showNotification(const QString &title, const QString &message, const int &displayTime, const QString &image);
     int navigate(const QString &to);
     int systemCommand(const QString &command);
 

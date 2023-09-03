@@ -17,31 +17,28 @@
                     "browsable": true,
                     "paramTypes": [
                         {
-                            "id": "1a897065-57c6-49b3-bac9-1e5db27859e5",
-                            "name": "ip",
-                            "displayName": "IP Address",
-                            "type" : "QString",
-                            "inputType": "IPv4Address",
-                            "defaultValue": ""
-                        },
-                        {
-                            "id": "660fb4d7-9479-4c9d-a900-ce221d2b8ae4",
-                            "name": "port",
-                            "displayName": "Port",
-                            "type" : "int"
-                        },
-                        {
-                            "id": "27ea7e46-80f0-49ea-9352-b57c78905c67",
-                            "name": "httpPort",
-                            "displayName": "HTTP port",
-                            "type" : "int",
-                            "defaultValue": 8080
-                        },
-                        {
                             "id": "692eb6e0-7f4e-4f43-92da-8347372287ce",
                             "name": "uuid",
                             "displayName": "UUID",
                             "type": "QString"
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "4a2e939a-dc9c-4885-8fd5-4b102f91483f",
+                            "name": "notificationCustomIconUrl",
+                            "displayName": "Notification icon URL",
+                            "type": "QString",
+                            "defaultValue": "https://downloads.nymea.io/nymea-icons/kodi-notification/nymea-logo.png"
+                        },
+                        {
+                            "id": "55133408-794a-4c32-a7f1-f59e83e6eae7",
+                            "name": "notificationDuration",
+                            "displayName": "Notification display times",
+                            "type": "uint",
+                            "minValue": 1500,
+                            "unit": "MilliSeconds",
+                            "defaultValue": 8000
                         }
                     ],
                     "stateTypes": [
@@ -238,8 +235,9 @@
                                     "name": "type",
                                     "displayName": "type",
                                     "type": "QString",
-                                    "defaultValue": "info",
+                                    "defaultValue": "icon",
                                     "allowedValues": [
+                                        "icon",
                                         "info",
                                         "warning",
                                         "error"

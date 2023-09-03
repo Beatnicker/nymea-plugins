@@ -186,9 +186,29 @@ QHostAddress Kodi::hostAddress() const
     return m_connection->hostAddress();
 }
 
-int Kodi::port() const
+void Kodi::setHostAddress(const QHostAddress &address)
+{
+    m_connection->setHostAddress(address);
+}
+
+uint Kodi::port() const
 {
     return m_connection->port();
+}
+
+void Kodi::setPort(uint port)
+{
+    m_connection->setPort(port);
+}
+
+uint Kodi::httpPort() const
+{
+    return m_httpPort;
+}
+
+void Kodi::setHttpPort(uint httpPort)
+{
+    m_httpPort = httpPort;
 }
 
 bool Kodi::connected() const
@@ -238,13 +258,13 @@ int Kodi::setRepeat(const QString &repeat)
     return m_jsonHandler->sendData("Player.SetRepeat", params);
 }
 
-int Kodi::showNotification(const QString &title, const QString &message, const int &displayTime, const QString &notificationType)
+int Kodi::showNotification(const QString &title, const QString &message, const int &displayTime, const QString &image)
 {
     QVariantMap params;
     params.insert("title", title);
     params.insert("message", message);
     params.insert("displaytime", displayTime);
-    params.insert("image", notificationType);
+    params.insert("image", image);
 
     return m_jsonHandler->sendData("GUI.ShowNotification", params);
 }
